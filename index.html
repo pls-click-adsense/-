@@ -2,8 +2,8 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>画像ウォーターマーク</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>画像・動画 ウォーターマーク</title>
 <style>
   body {
     font-family: sans-serif;
@@ -13,6 +13,7 @@
     max-width: 100%;
     border: 1px solid #ccc;
     margin-top: 10px;
+    display: none;
   }
   button {
     margin-top: 10px;
@@ -23,72 +24,117 @@
 </head>
 <body>
 
-<h2>画像に文字を入れる</h2>
+<h3>画像 / 動画に文字を入れる（ローカル処理）</h3>
 
-<input type="file" id="upload" accept="image/*">
+<input type="file" id="upload" accept="image/*,video/*">
 <br>
 
 <canvas id="canvas"></canvas>
 <br>
 
-<button id="download">画像を保存</button>
+<button id="run">処理して保存</button>
+<p id="status"></p>
 
-<script>
+<script type="module">
+import { createFFmpeg, fetchFile } from
+  "https://unpkg.com/@ffmpeg/ffmpeg@0.12.6/dist/ffmpeg.min.js";
+
 const upload = document.getElementById("upload");
+const runBtn = document.getElementById("run");
+const status = document.getElementById("status");
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
-upload.addEventListener("change", e => {
-  const file = e.target.files[0];
+const ffmpeg = createFFmpeg({ log: false });
+
+let file;
+const TEXT = "無断転載禁止 / Do not repost";
+
+upload.onchange = e => {
+  file = e.target.files[0];
+};
+
+runBtn.onclick = async () => {
   if (!file) return;
 
+  if (file.type.startsWith("image/")) {
+    processImage(file);
+  } else if (file.type.startsWith("video/")) {
+    await processVideo(file);
+  } else {
+    alert("画像か動画を選んでください");
+  }
+};
+
+function processImage(file) {
   const img = new Image();
   img.onload = () => {
+    canvas.style.display = "block";
     canvas.width = img.width;
     canvas.height = img.height;
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(img, 0, 0);
-
-    // === ここが文字入れ部分 ===
-    const text = "転載禁止 / 大麻を販売しております /";
 
     const fontSize = Math.max(16, Math.floor(img.width / 25));
     ctx.font = fontSize + "px sans-serif";
     ctx.fillStyle = "rgba(255,255,255,0.6)";
-    ctx.strokeStyle = "rgba(0,0,0,0.4)";
+    ctx.strokeStyle = "rgba(0,0,0,0.5)";
     ctx.lineWidth = 2;
-
     ctx.textBaseline = "bottom";
 
-    const metrics = ctx.measureText(text);
+    const metrics = ctx.measureText(TEXT);
     const padding = 20;
     const x = img.width - metrics.width - padding;
     const y = img.height - padding;
 
-    // 縁取り＋文字
-    ctx.strokeText(text, x, y);
-    ctx.fillText(text, x, y);
+    ctx.strokeText(TEXT, x, y);
+    ctx.fillText(TEXT, x, y);
+
+    canvas.toBlob(blob => {
+      const url = URL.createObjectURL(blob);
+      download(url, "watermarked.png");
+    });
   };
-
   img.src = URL.createObjectURL(file);
-});
+}
 
-document.getElementById("download").onclick = () => {
-  // Safari対応：Blob経由
-  canvas.toBlob(blob => {
-    if (!blob) return;
+async function processVideo(file) {
+  status.textContent = "準備中…（初回は少し時間かかる）";
 
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "watermarked.png";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  });
-};
+  if (!ffmpeg.isLoaded()) {
+    await ffmpeg.load();
+  }
+
+  ffmpeg.FS("writeFile", "input.mp4", await fetchFile(file));
+
+  status.textContent = "動画処理中…";
+
+  await ffmpeg.run(
+    "-i", "input.mp4",
+    "-vf",
+    "drawtext=text='無断転載禁止 / Do not repost':fontcolor=white@0.6:fontsize=32:x=w-tw-20:y=h-th-20",
+    "-codec:a", "copy",
+    "output.mp4"
+  );
+
+  const data = ffmpeg.FS("readFile", "output.mp4");
+  const url = URL.createObjectURL(
+    new Blob([data.buffer], { type: "video/mp4" })
+  );
+
+  download(url, "watermarked.mp4");
+  status.textContent = "完了";
+}
+
+function download(url, filename) {
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
 </script>
 
 </body>
