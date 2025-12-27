@@ -1,1 +1,54 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>画像ウォーターマーク</title>
+</head>
+<body>
+<input type="file" id="upload" accept="image/*">
+<br><br>
+<canvas id="canvas"></canvas>
+<br><br>
+<button id="download">ダウンロード</button>
+
+<script>
+const upload = document.getElementById("upload");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+upload.addEventListener("change", e => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const img = new Image();
+  img.onload = () => {
+    canvas.width = img.width;
+    canvas.height = img.height;
+    ctx.drawImage(img, 0, 0);
+
+    // テキスト設定
+    const text = "無断転載禁止";
+    ctx.font = Math.floor(img.width / 25) + "px sans-serif";
+    ctx.fillStyle = "rgba(255,255,255,0.6)";
+    ctx.textBaseline = "bottom";
+
+    const metrics = ctx.measureText(text);
+    const x = img.width - metrics.width - 20;
+    const y = img.height - 20;
+
+    ctx.fillText(text, x, y);
+  };
+
+  img.src = URL.createObjectURL(file);
+});
+
+document.getElementById("download").onclick = () => {
+  const a = document.createElement("a");
+  a.href = canvas.toDataURL("image/png");
+  a.download = "watermarked.png";
+  a.click();
+};
+</script>
+</body>
+</html>
 
