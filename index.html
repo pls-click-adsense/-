@@ -3,13 +3,35 @@
 <head>
 <meta charset="UTF-8">
 <title>画像ウォーターマーク</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  body {
+    font-family: sans-serif;
+    padding: 20px;
+  }
+  canvas {
+    max-width: 100%;
+    border: 1px solid #ccc;
+    margin-top: 10px;
+  }
+  button {
+    margin-top: 10px;
+    padding: 8px 16px;
+    font-size: 16px;
+  }
+</style>
 </head>
 <body>
+
+<h2>画像に文字を入れる</h2>
+
 <input type="file" id="upload" accept="image/*">
-<br><br>
+<br>
+
 <canvas id="canvas"></canvas>
-<br><br>
-<button id="download">ダウンロード</button>
+<br>
+
+<button id="download">画像を保存</button>
 
 <script>
 const upload = document.getElementById("upload");
@@ -24,18 +46,28 @@ upload.addEventListener("change", e => {
   img.onload = () => {
     canvas.width = img.width;
     canvas.height = img.height;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(img, 0, 0);
 
-    // テキスト設定
-    const text = "無断転載禁止";
-    ctx.font = Math.floor(img.width / 25) + "px sans-serif";
+    // === ここが文字入れ部分 ===
+    const text = "無断転載禁止 / Do not repost";
+
+    const fontSize = Math.max(16, Math.floor(img.width / 25));
+    ctx.font = fontSize + "px sans-serif";
     ctx.fillStyle = "rgba(255,255,255,0.6)";
+    ctx.strokeStyle = "rgba(0,0,0,0.4)";
+    ctx.lineWidth = 2;
+
     ctx.textBaseline = "bottom";
 
     const metrics = ctx.measureText(text);
-    const x = img.width - metrics.width - 20;
-    const y = img.height - 20;
+    const padding = 20;
+    const x = img.width - metrics.width - padding;
+    const y = img.height - padding;
 
+    // 縁取り＋文字
+    ctx.strokeText(text, x, y);
     ctx.fillText(text, x, y);
   };
 
@@ -43,12 +75,21 @@ upload.addEventListener("change", e => {
 });
 
 document.getElementById("download").onclick = () => {
-  const a = document.createElement("a");
-  a.href = canvas.toDataURL("image/png");
-  a.download = "watermarked.png";
-  a.click();
+  // Safari対応：Blob経由
+  canvas.toBlob(blob => {
+    if (!blob) return;
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "watermarked.png";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
 };
 </script>
+
 </body>
 </html>
-
