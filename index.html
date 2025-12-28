@@ -2,10 +2,28 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>吹き出しジェネレーター</title>
+<title>吹き出し文字入れ</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-  body { text-align: center; font-family: sans-serif; }
-  canvas { max-width: 100%; }
+  body {
+    margin: 0;
+    padding: 12px;
+    background: #111;
+    color: #fff;
+    font-family: system-ui, sans-serif;
+    text-align: center;
+  }
+  input, button {
+    font-size: 16px;
+    padding: 8px;
+    margin: 4px;
+  }
+  canvas {
+    width: 100%;
+    max-width: 420px; /* スマホ見やすさ */
+    height: auto;
+    background: #000;
+  }
 </style>
 </head>
 <body>
@@ -13,6 +31,7 @@
 <input id="text" placeholder="吹き出しの文字">
 <button onclick="render()">反映</button>
 <button onclick="download()">保存</button>
+
 <br><br>
 <canvas id="c"></canvas>
 
@@ -20,34 +39,50 @@
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
 
+// 元画像
 const img = new Image();
 img.src = "face.jpeg";
 img.onload = () => {
-  canvas.width = img.width;
-  canvas.height = img.height;
+  canvas.width = img.width;   // 1080
+  canvas.height = img.height; // 1920
   render();
 };
 
-function drawBubble() {
-  ctx.fillStyle = "white";
-  ctx.strokeStyle = "black";
-  ctx.lineWidth = 4;
-  ctx.beginPath();
-  ctx.roundRect(60, 40, 500, 120, 20);
-  ctx.fill();
-  ctx.stroke();
-}
+// ===== 吹き出し文字エリア（この画像用・決め打ち）=====
+const bubble = {
+  x: 120,        // 左
+  y: 140,        // 上
+  width: 840,    // 横幅
+  fontSize: 44,
+  lineHeight: 56
+};
+// ======================================================
 
 function drawText(text) {
-  ctx.fillStyle = "black";
-  ctx.font = "32px sans-serif";
-  ctx.fillText(text, 80, 115);
+  ctx.fillStyle = "#000";
+  ctx.font = `${bubble.fontSize}px sans-serif`;
+  ctx.textBaseline = "top";
+
+  let x = bubble.x;
+  let y = bubble.y;
+  let line = "";
+
+  for (const ch of text) {
+    const test = line + ch;
+    if (ctx.measureText(test).width > bubble.width) {
+      ctx.fillText(line, x, y);
+      line = ch;
+      y += bubble.lineHeight;
+    } else {
+      line = test;
+    }
+  }
+  if (line) ctx.fillText(line, x, y);
 }
 
 function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(img, 0, 0);
-  drawBubble();
   drawText(document.getElementById("text").value);
 }
 
@@ -55,7 +90,7 @@ function download() {
   canvas.toBlob(blob => {
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = "hukidashi.png";
+    a.download = "result.png";
     a.click();
     URL.revokeObjectURL(a.href);
   });
@@ -64,4 +99,3 @@ function download() {
 
 </body>
 </html>
-
