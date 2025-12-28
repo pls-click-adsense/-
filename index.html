@@ -1,1 +1,67 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>吹き出しジェネレーター</title>
+<style>
+  body { text-align: center; font-family: sans-serif; }
+  canvas { max-width: 100%; }
+</style>
+</head>
+<body>
+
+<input id="text" placeholder="吹き出しの文字">
+<button onclick="render()">反映</button>
+<button onclick="download()">保存</button>
+<br><br>
+<canvas id="c"></canvas>
+
+<script>
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+
+const img = new Image();
+img.src = "face.jpeg";
+img.onload = () => {
+  canvas.width = img.width;
+  canvas.height = img.height;
+  render();
+};
+
+function drawBubble() {
+  ctx.fillStyle = "white";
+  ctx.strokeStyle = "black";
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.roundRect(60, 40, 500, 120, 20);
+  ctx.fill();
+  ctx.stroke();
+}
+
+function drawText(text) {
+  ctx.fillStyle = "black";
+  ctx.font = "32px sans-serif";
+  ctx.fillText(text, 80, 115);
+}
+
+function render() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(img, 0, 0);
+  drawBubble();
+  drawText(document.getElementById("text").value);
+}
+
+function download() {
+  canvas.toBlob(blob => {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "hukidashi.png";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+}
+</script>
+
+</body>
+</html>
 
